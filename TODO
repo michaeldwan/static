@@ -1,0 +1,17 @@
+x get a list of files in a directory
+x get a list of objects in s3 and their md5
+
+
+
+
+- upload/scan concurrently
+- read a config file
+- redirection/rewrite rules
+- invalidate changed files
+- configure s3 for website hosting
+- configure cloudfront distro for website hosting (pointing to s3)
+- configure dns route53?
+- color
+
+- prune stale files on s3
+- max age restrictions w/ support for leaving some patterns
