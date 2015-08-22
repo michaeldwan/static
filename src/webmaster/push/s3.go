@@ -69,7 +69,3 @@ func deleteKey(ctx *context.Context, key string) error {
 	_, err := ctx.S3Client().DeleteObject(input)
 	return err
 }
-
-func (d *Bucket) WebsiteEndpoint() string {
-	return d.Bucket + ".s3-website-" + d.Region + ".amazonaws.com"
-}

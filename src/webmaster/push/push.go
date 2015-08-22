@@ -6,7 +6,7 @@ import (
   "time"
 )
 
-func Perform(ctx *context.Context) {
+func Perform(ctx *context.Context, dryRun bool) {
   defer ctx.Clean()
 
   fmt.Printf("Source: %s\n", ctx.Config.SourceDirectory)
@@ -24,27 +24,49 @@ func Perform(ctx *context.Context) {
   ticker.Stop()
   printScanMsg(manifest, true)
 
+  if dryRun {
+    fmt.Println("*** Dry Run, operations are simulated ***")
+  }
+
+  var created int
+  var updated int
+  var deleted int
+  var bytes int64
+
   for _, entry := range manifest.entries {
     switch entry.Operation() {
     case Create:
-      if err := putFile(ctx, entry.Src); err != nil {
-        panic(err)
+      if !dryRun {
+        if err := putFile(ctx, entry.Src); err != nil {
+          panic(err)
+        }
       }
+      created++
+      bytes += entry.Src.Size()
       printCreateMsg(entry.Src)
     case Update:
-      if err := putFile(ctx, entry.Src); err != nil {
-        panic(err)
+      if !dryRun {
+        if err := putFile(ctx, entry.Src); err != nil {
+          panic(err)
+        }
       }
+      updated++
+      bytes += entry.Src.Size()
       printUpdateMsg(entry.Src)
     case Delete:
-      if err := deleteKey(ctx, entry.Key); err != nil {
-        panic(err)
+      if !dryRun {
+        if err := deleteKey(ctx, entry.Key); err != nil {
+          panic(err)
+        }
       }
+      deleted++
       printDeleteMsg(entry.Key)
     case Skip:
       printSkipMsg(entry.Key)
     }
   }
+
+  fmt.Printf("\rDone: %d files created, %d updated, and %d deleted ~ %db\n", created, updated, deleted, bytes)
 }
 
 func printScanMsg(m *Manifest, done bool) {

@@ -11,6 +11,7 @@ var configFilePath string
 var ctx *context.Context
 // var Verbose bool
 var dryRun bool
+var force bool
 
 var WebmasterCmd = &cobra.Command{
 	Use:   "webmaster",
@@ -32,7 +33,7 @@ var pushCmd = &cobra.Command{
 	Short: "Push changes to AWS",
 	Long:  `Webmaster will upload changed files to S3, and more..`,
 	Run: func(cmd *cobra.Command, args []string) {
-		push.Perform(ctx)
+		push.Perform(ctx, dryRun)
 	},
 }
 
@@ -40,7 +41,7 @@ func main() {
 	WebmasterCmd.PersistentFlags().StringVarP(&configFilePath, "config", "c", context.ConfigFileName, "path to a configuration file")
 	// WebmasterCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
 	pushCmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "simulate operations")
-	pushCmd.Flags().BoolVarP(&dryRun, "force", "f", false, "push everything")
+	pushCmd.Flags().BoolVarP(&force, "force", "f", false, "push everything")
 	WebmasterCmd.AddCommand(pushCmd)
 	WebmasterCmd.Execute()
 }
