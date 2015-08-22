@@ -1,0 +1,27 @@
+#!/usr/bin/env ruby
+
+require 'pathname'
+require 'yaml'
+
+root =  Pathname.new(File.expand_path(ARGV.first || '.'))
+
+def run(cmd)
+  puts cmd
+  system(cmd)
+end
+
+YAML.load_file(root.join("vendor", "subtrees.yml")).each do |name, config|
+  unless `git remote`.split(/\n/).include?(name)
+    puts "Configuring remote"
+    run("git remote add #{name} #{config["repository"]}")
+  end
+  puts "Fetching..."
+  run("git fetch #{name}")
+  if root.join(name).exist?
+    puts "Pulling #{name}"
+    run("git subtree pull --prefix=#{name} #{name} #{config["revision"]} --squash")
+  else
+    puts "Adding #{name}"
+    run("git subtree add --prefix=#{name} #{name} #{config["revision"]} --squash")
+  end
+end

@@ -1,0 +1,48 @@
+
+################################
+# github.com/spf13/cobra
+################################
+vendor/src/github.com/spf13/cobra:
+  repository: https://github.com/spf13/cobra.git
+  revision: 385fc87e4343efec233811d3d933509e8975d11a
+vendor/src/github.com/inconshreveable/mousetrap:
+  repository: https://github.com/inconshreveable/mousetrap.git
+  revision: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+vendor/src/github.com/spf13/pflag:
+  repository: https://github.com/spf13/pflag.git
+  revision: 67cbc198fd11dab704b214c1e629a97af392c085
+
+# ################################
+# # github.com/spf13/cobra
+# ################################
+vendor/src/github.com/spf13/cast:
+  repository: https://github.com/spf13/cast
+  revision: ee815aaf958c707ad07547cd62150d973710f747
+vendor/src/github.com/spf13/jWalterWeatherman:
+  repository: https://github.com/spf13/jWalterWeatherman
+  revision: 3d60171a64319ef63c78bd45bd60e6eab1e75f8b
+    
+################################
+# github.com/aws/aws-sdk-go
+################################
+vendor/src/github.com/aws/aws-sdk-go:
+  repository: https://github.com/aws/aws-sdk-go.git
+  revision: 8b15d2217025f7d51ae34b88497232d3b6cfca81
+vendor/src/github.com/vaughan0/go-ini:
+  repository: https://github.com/vaughan0/go-ini.git
+  revision: a98ad7ee00ec53921f08832bc06ecf7fd600e6a1
+
+
+################################
+# github.com/go-yaml/yaml
+################################
+vendor/src/github.com/go-yaml/yaml:
+  repository: https://github.com/go-yaml/yaml.git
+  revision: 7ad95dd0798a40da1ccdff6dff35fd177b5edf40
+
+################################
+# github.com/stretchr/testify
+################################
+vendor/src/github.com/stretchr/testify:
+  repository: https://github.com/stretchr/testify
+  revision: 089c7181b8c728499929ff09b62d3fdd8df8adff

@@ -1,17 +1,40 @@
-x get a list of files in a directory
-x get a list of objects in s3 and their md5
-
-
-
-
-- upload/scan concurrently
-- read a config file
+- bring back pipeline
+- bring back push (make an s3.go w/ functions for list, get, put)
+- globlist priority (top to bottom, see sample site max-age)
+- switch to go 1.5 w/ vendoring
 - redirection/rewrite rules
-- invalidate changed files
+- better AWS error reporting
+- better log output (verbose and quiet)
+- color
+- stats after action
+- max age restrictions w/ support for leaving some patterns
+- force option
+- prune stale files on s3
+- if bucket listObjects indicates more files, continue fetching until no more
+- upload/scan concurrently
+- pass upload concurrency level via params
+- sanitize s3 key names (Alphanumeric characters [0-9a-zA-Z], Special characters `!, -, _, ., *, ', (, and )`)
+- zopfli
+- parallel uploads w/ limit
+
+
 - configure s3 for website hosting
 - configure cloudfront distro for website hosting (pointing to s3)
 - configure dns route53?
-- color
+- redirection buckets
 
-- prune stale files on s3
-- max age restrictions w/ support for leaving some patterns
+
+Example output:
+Source: /Users/md/my/directory
+Destination: michaeldwan.com, us-east-1
+Scanning: 0 files, 0 redirects, 0 existing objects
+*** Dry Run, operations are simulated ***
+ [+] /tmp/foobar --> https://twitter.com ~ 0.01kb
+ [+] /writing/thing.html ~ 0.01kb
+ [-] /writing/thing.html ~ deleted
+ [*] /writing/thing.html ~ 0.01kb
+ [ ] /writing/thing.html ~ skipped
+ [ ] /writing/thing.html ~ failed, retrying
+Done: 12 files created, 32 updated, 53 deleted ~ 34MB in 32s
+Searching CloudFront distributions...
+Invalidate 213 items from sdfsdfgsdfg.cloudfront.com (something.com)
