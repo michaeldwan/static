@@ -3,10 +3,7 @@ package push
 import (
   "webmaster/context"
   "github.com/aws/aws-sdk-go/aws"
-  "github.com/aws/aws-sdk-go/aws/awsutil"
   "github.com/aws/aws-sdk-go/service/s3"
-  "fmt"
-  "log"
   "encoding/hex"
 )
 
@@ -17,16 +14,14 @@ func scanBucket(ctx *context.Context) <-chan *DestObject {
 		listRequest := &s3.ListObjectsInput{
 			Bucket: aws.String(ctx.S3Bucket),
 		}
-		resp, err := ctx.S3Client().ListObjects(listRequest)
-		if err != nil {
-			fmt.Println(awsutil.StringValue(resp))
-			log.Fatal(err)
-		}
-		for _, obj := range resp.Contents {
-			out <- newDestObject(*obj)
-		}
-	}()
-	return out
+    ctx.S3Client().ListObjectsPages(listRequest, func (page *s3.ListObjectsOutput, lastPage bool) bool {
+      for _, obj := range page.Contents {
+        out <- newDestObject(*obj)
+      }
+      return true
+    })
+  }()
+  return out
 }
 
 func newDestObject(obj s3.Object) *DestObject {
