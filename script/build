@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Usage: script/build [-o output] [test]
+
+set -ex
+
+export GO15VENDOREXPERIMENT=1
+go build -v github.com/michaeldwan/webmaster

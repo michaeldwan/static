@@ -1,5 +1,3 @@
-- bring back pipeline
-- bring back push (make an s3.go w/ functions for list, get, put)
 - globlist priority (top to bottom, see sample site max-age)
 - switch to go 1.5 w/ vendoring
 - redirection/rewrite rules
@@ -10,12 +8,14 @@
 - max age restrictions w/ support for leaving some patterns
 - force option
 - prune stale files on s3
-- if bucket listObjects indicates more files, continue fetching until no more
 - upload/scan concurrently
 - pass upload concurrency level via params
 - sanitize s3 key names (Alphanumeric characters [0-9a-zA-Z], Special characters `!, -, _, ., *, ', (, and )`)
 - zopfli
-- parallel uploads w/ limit
+- parallel uploads w/ limit (https://nesv.github.io/golang/2014/02/25/worker-queues-in-go.html)
+- retry/requeue ops on failure
+- smarter invalidations
+- aws credential setup (check out aws cli)
 
 
 - configure s3 for website hosting
@@ -23,8 +23,12 @@
 - configure dns route53?
 - redirection buckets
 
+commands:
+- authenticate
+- Push
+- init
+- setup
 
-Example output:
 Source: /Users/md/my/directory
 Destination: michaeldwan.com, us-east-1
 Scanning: 0 files, 0 redirects, 0 existing objects
