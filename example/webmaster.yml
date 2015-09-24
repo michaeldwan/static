@@ -1,11 +1,11 @@
 source_directory: ./build
 ignore:
-  - *.DS_Store
+  - "*.DS_Store"
 
 redirects:
-  /twitter: https://twitter.com/michaeldwan
+  /twitter2: https://twitter.com/michaeldwan
   /essays/123: /writings/456
   /essays/456: google.com
 gzip: *.html
 s3_region: us-east-1
-s3_bucket: michaeldwan.com
+s3_bucket: webmaster.michaeldwan.com

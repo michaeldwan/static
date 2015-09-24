@@ -2,13 +2,14 @@ package context
 
 import (
 	"fmt"
-	"github.com/go-yaml/yaml"
-	"github.com/spf13/cast"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/go-yaml/yaml"
+	"github.com/spf13/cast"
 )
 
 const ConfigFileName string = "webmaster.yml"
@@ -61,7 +62,7 @@ func newConfig() *Config {
 		ignorePatterns: newGlobList(false),
 		gzipPatterns:   newGlobList(false),
 		maxAgePatterns: newGlobList(0),
-		redirects: make(map[string]string),
+		redirects:      make(map[string]string),
 	}
 }
 
@@ -185,6 +186,7 @@ func (c *Config) loadMaxAge(raw configMap) {
 		c.maxAgePatterns.defaultValue = defaultMaxAge
 	} else if patterns, ok := v.(configMap); ok {
 		for pattern, maxAge := range patterns {
+			fmt.Println("pattern", pattern, maxAge)
 			c.maxAgePatterns.add(cast.ToString(pattern), cast.ToInt(maxAge))
 		}
 	} else {

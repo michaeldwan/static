@@ -2,12 +2,13 @@ package dest
 
 import (
 	"fmt"
+	"log"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/awsutil"
 	"github.com/aws/aws-sdk-go/service/cloudfront"
-	"log"
-	"time"
 )
 
 var cf *cloudfront.CloudFront

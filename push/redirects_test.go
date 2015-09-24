@@ -2,11 +2,12 @@ package push
 
 import (
 	"bytes"
-	"os"
 	"io/ioutil"
-	"github.com/stretchr/testify/assert"
+	"os"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func testRedirectPage(destination string) string {

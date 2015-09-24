@@ -1,10 +1,11 @@
 package context
 
 import (
-	"github.com/go-yaml/yaml"
-	"github.com/stretchr/testify/assert"
 	"log"
 	"testing"
+
+	"github.com/go-yaml/yaml"
+	"github.com/stretchr/testify/assert"
 )
 
 type newTestConfigCallback func(c *Config, d configMap)

@@ -2,27 +2,23 @@ package push
 
 import (
 	"sync"
+
 	"github.com/michaeldwan/webmaster/context"
 )
-
-type DestObject struct {
-	Key    string
-	Digest []byte
-}
 
 type Manifest struct {
 	*sync.Mutex
 	context *context.Context
 	entries map[string]*Entry
 
-	objCount int64
-	fileCount int64
+	objCount   int64
+	fileCount  int64
 	redirCount int64
 }
 
 func newManifest(context *context.Context) *Manifest {
 	return &Manifest{
-		Mutex: &sync.Mutex{},
+		Mutex:   &sync.Mutex{},
 		context: context,
 		entries: make(map[string]*Entry),
 	}
@@ -47,6 +43,10 @@ func (m *Manifest) scan() {
 	}()
 
 	wg.Wait()
+
+	for _, e := range m.entries {
+		e.plan(m.context)
+	}
 }
 
 func (m *Manifest) entryForKey(key string) *Entry {
@@ -79,39 +79,11 @@ func (m *Manifest) addDestObject(obj *DestObject) {
 }
 
 func (m *Manifest) entriesForOperation(op Operation) []Entry {
-		entries := make([]Entry, 0)
-		for _, entry := range m.entries {
-			if entry.Operation() == op {
-				entries = append(entries, *entry)
-			}
+	var entries []Entry
+	for _, entry := range m.entries {
+		if entry.Operation() == op {
+			entries = append(entries, *entry)
 		}
-		return entries
+	}
+	return entries
 }
-
-
-// --------------------
-
-// func (m *Manifest) Inspect() {
-// 	fmt.Println(m.entries)
-// 	for key, e := range m.entries {
-// 		destDigest := ""
-// 		if e.Dst != nil {
-// 			destDigest = hex.EncodeToString(e.Dst.Digest)
-// 		}
-// 		localDigest := ""
-// 		if e.Src != nil {
-// 			localDigest = hex.EncodeToString(e.Src.Digest())
-// 		}
-// 		fmt.Printf("%s: %s - %s <> %s\n", key, e.Operation(), localDigest, destDigest)
-// 	}
-// }
-
-// func (m *Manifest) updatedKeys() []string {
-// 	keys := make([]string, 0)
-// 	for key, entry := range m.entries {
-// 		if entry.Operation() == Update {
-// 			keys = append(keys, key)
-// 		}
-// 	}
-// 	return keys
-// }

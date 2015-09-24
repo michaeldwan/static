@@ -2,31 +2,39 @@ package push
 
 import (
 	"bytes"
+
+	"github.com/michaeldwan/webmaster/context"
 )
 
 type Operation int
 
 const (
-	Create Operation = iota
+	Skip Operation = iota
+	Create
 	Update
+	ForceUpdate
 	Delete
-	Skip
 )
 
 type Entry struct {
-	Key string
-	Src *File
-	Dst *DestObject
+	Key       string
+	Src       *File
+	Dst       *DestObject
+	operation Operation
 }
 
-func (e *Entry) Operation() Operation {
+func (e *Entry) Operation() Operation { return e.operation }
+
+func (e *Entry) plan(ctx *context.Context) {
 	if e.Src != nil && e.Dst == nil {
-		return Create
+		e.operation = Create
 	} else if e.Src == nil && e.Dst != nil {
-		return Delete
+		e.operation = Delete
 	} else if e.Src != nil && e.Dst != nil && !bytes.Equal(e.Src.Digest(), e.Dst.Digest) {
-		return Update
+		e.operation = Update
+	} else if ctx.Flags.Force {
+		e.operation = ForceUpdate
 	} else {
-		return Skip
+		e.operation = Skip
 	}
 }
