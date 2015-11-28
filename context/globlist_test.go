@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPatternRegexp(t *testing.T) {
+func TestGloblistPatternRegexp(t *testing.T) {
 	tests := map[string]string{
 		`*`:                       `.{0,}`,
 		`*.html`:                  `.{0,}\.html`,
@@ -26,7 +26,7 @@ func TestPatternRegexp(t *testing.T) {
 	}
 }
 
-func TestBoolForPath(t *testing.T) {
+func TestGloblistBoolForPath(t *testing.T) {
 	tests := map[string]bool{
 		`index.html`:        true,
 		`abc/index.html`:    true,
@@ -37,11 +37,9 @@ func TestBoolForPath(t *testing.T) {
 	}
 
 	g := newGlobList(false)
-	g.loadFromMapStringInterface(map[string]interface{}{
-		`*.html`:  true,
-		`*.css`:   true,
-		`/assets`: true,
-	})
+	g.add(`*.html`, true)
+	g.add(`*.css`, true)
+	g.add(`/assets`, true)
 
 	for input, expected := range tests {
 		actual := g.get(input)
@@ -52,4 +50,24 @@ func TestBoolForPath(t *testing.T) {
 func TestGlobListGetDefault(t *testing.T) {
 	g := newGlobList("hello")
 	assert.Equal(t, "hello", g.get("missing"))
+}
+
+func TestGlobListSortOrder(t *testing.T) {
+	tests := map[string]int{
+		`index.html`:         1,
+		`abc/index.html`:     2,
+		`abc/xyz/index.html`: 3,
+		`something.html`:     4,
+	}
+
+	g := newGlobList(false)
+	g.add(`abc/index.html`, 2)
+	g.add(`abc/*/index.html`, 3)
+	g.add(`index.html`, 1)
+	g.add(`*`, 4)
+
+	for input, expected := range tests {
+		actual := g.get(input)
+		assert.Equal(t, expected, actual, input)
+	}
 }

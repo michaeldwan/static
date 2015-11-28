@@ -4,9 +4,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	// "github.com/aws/aws-sdk-go/aws/awsutil"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
@@ -18,7 +17,7 @@ type Flags struct {
 }
 
 type Context struct {
-	*Config
+	Config
 	workingDir     workingDir
 	awsCredentials *credentials.Credentials
 	s3Client       *s3.S3
@@ -27,8 +26,8 @@ type Context struct {
 
 func New(configPath string) *Context {
 	ctx := &Context{}
-	ctx.Config = newConfig()
-	ctx.Config.loadFile(configPath)
+	ctx.Config = Config{}
+	ctx.Config.loadFromPath(configPath)
 	ctx.workingDir = newWorkingDir(ctx.Path)
 	return ctx
 }

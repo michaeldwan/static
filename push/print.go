@@ -3,18 +3,21 @@ package push
 import (
 	"bytes"
 	"fmt"
+
+	"github.com/michaeldwan/static/printer"
 )
 
 func printScanMsg(m *Manifest, done bool) {
-	fmt.Printf("\rScanning: %d files, %d redirects, %d existing objects", m.fileCount, m.redirCount, m.objCount)
+	printer.Infof("\rScanning: %d files, %d redirects, %d existing objects", m.fileCount, m.redirCount, m.objCount)
 	if done {
-		fmt.Printf(", done\n")
+		printer.Infof(", done\n")
 	}
 }
 
 func printEntryStatus(e Entry, attemptNumber int, err error, verbose bool) {
-	if e.Operation() == Skip && !verbose {
-		return
+	level := printer.DefaultLevel
+	if e.Operation() == Skip {
+		level = printer.LevelDebug
 	}
 	var buffer bytes.Buffer
 	buffer.WriteString("  ")
@@ -39,7 +42,7 @@ func printEntryStatus(e Entry, attemptNumber int, err error, verbose bool) {
 		buffer.WriteString("\n    ")
 		buffer.WriteString(err.Error())
 	}
-	fmt.Println(buffer.String())
+	printer.Println(level, buffer.String())
 }
 
 func sprintOperationType(e Entry) string {
@@ -65,7 +68,7 @@ func sprintDesc(e Entry) string {
 }
 
 func printStats(stats stats) {
-	fmt.Printf("\rDone: %d files created, %d updated, and %d deleted ~ %s\n", stats.created, stats.updated, stats.deleted, formatByteSize(float64(stats.bytes)))
+	printer.Infof("Done: %d files created, %d updated, and %d deleted ~ %s\n", stats.created, stats.updated, stats.deleted, formatByteSize(float64(stats.bytes)))
 }
 
 const (

@@ -1,109 +1,108 @@
 package context
 
 import (
-	"log"
+	"strings"
 	"testing"
 
-	"github.com/go-yaml/yaml"
 	"github.com/stretchr/testify/assert"
 )
 
-type newTestConfigCallback func(c *Config, d configMap)
+type testConfigCallback func(c Config, seq sequence)
 
-func newTestConfig(data string, callback newTestConfigCallback) {
-	c := newConfig()
-	d := make(configMap)
-	if err := yaml.Unmarshal([]byte(data), &d); err != nil {
-		log.Panic(err)
+func newTestConfig(data string, callback testConfigCallback) {
+	c := Config{}
+	seq, err := parseConfig(strings.NewReader(data))
+	if err != nil {
+		panic(err)
 	}
-	callback(c, d)
+	callback(c, seq)
 }
 
-func TestPath(t *testing.T) {
-	path := "/Users/md/src/webmaster/webmaster.yml"
-	newTestConfig("source_directory: .\ns3_bucket: bucket", func(c *Config, d configMap) {
-		c.load(path, d)
-		assert.Equal(t, path, c.Path)
+// func TestConfigPath(t *testing.T) {
+// 	path := "/Users/md/src/static/static.yml"
+// 	newTestConfig("source_directory: .\ns3_bucket: bucket", func(c Config, seq sequence) {
+// 		c.load(path, seq)
+// 		assert.Equal(t, path, c.Path)
+// 	})
+// }
+
+func TestConfigSourceDirectory(t *testing.T) {
+	newTestConfig("source_directory: ./build", func(c Config, seq sequence) {
+		c.loadSourceDirectory("/Users/md/src/static/static.yml", seq)
+		assert.Equal(t, "/Users/md/src/static/build", c.SourceDirectory)
 	})
 }
 
-func TestSourceDirectory(t *testing.T) {
-	newTestConfig("source_directory: ./build", func(c *Config, d configMap) {
-		c.loadSourceDirectory("/Users/md/src/webmaster/webmaster.yml", d)
-		assert.Equal(t, "/Users/md/src/webmaster/build", c.SourceDirectory)
-	})
-}
-
-func TestSourceDirectoryAbsolute(t *testing.T) {
-	newTestConfig("source_directory: /src/build", func(c *Config, d configMap) {
-		c.loadSourceDirectory("/Users/md/src/webmaster/webmaster.yml", d)
+func TestConfigSourceDirectoryAbsolute(t *testing.T) {
+	newTestConfig("source_directory: /src/build", func(c Config, seq sequence) {
+		c.loadSourceDirectory("/Users/md/src/static/static.yml", seq)
 		assert.Equal(t, "/src/build", c.SourceDirectory)
 	})
 }
 
-func TestSourceDirectoryMissing(t *testing.T) {
-	newTestConfig("source_directory: ", func(c *Config, d configMap) {
+func TestConfigSourceDirectoryMissing(t *testing.T) {
+	newTestConfig("source_directory: ", func(c Config, seq sequence) {
 		assert.Panics(t, func() {
-			c.loadSourceDirectory("/Users/md/src/webmaster/webmaster.yml", d)
+			c.loadSourceDirectory("/Users/md/src/static/static.yml", seq)
 		})
 	})
 
-	newTestConfig("", func(c *Config, d configMap) {
+	newTestConfig("", func(c Config, seq sequence) {
 		assert.Panics(t, func() {
-			c.loadSourceDirectory("/Users/md/src/webmaster/webmaster.yml", d)
+			c.loadSourceDirectory("/Users/md/src/static/static.yml", seq)
 		})
 	})
 }
 
-func TestS3Region(t *testing.T) {
-	newTestConfig("s3_region: us-west-1", func(c *Config, d configMap) {
-		c.loadS3Region(d)
+func TestConfigS3Region(t *testing.T) {
+	newTestConfig("s3_region: us-west-1", func(c Config, seq sequence) {
+		c.loadS3Region(seq)
 		assert.Equal(t, "us-west-1", c.S3Region)
 	})
 }
 
-func TestS3RegionMissing(t *testing.T) {
-	newTestConfig("s3_region: ", func(c *Config, d configMap) {
-		c.loadS3Region(d)
-		assert.Equal(t, S3RegionDefault, c.S3Region)
+func TestConfigS3RegionMissing(t *testing.T) {
+	newTestConfig("s3_region: ", func(c Config, seq sequence) {
+		c.loadS3Region(seq)
+		assert.Equal(t, s3RegionDefault, c.S3Region)
 	})
 
-	newTestConfig("", func(c *Config, d configMap) {
-		c.loadS3Region(d)
-		assert.Equal(t, S3RegionDefault, c.S3Region)
+	newTestConfig("", func(c Config, seq sequence) {
+		c.loadS3Region(seq)
+		assert.Equal(t, s3RegionDefault, c.S3Region)
 	})
 }
 
-func TestS3Bucket(t *testing.T) {
-	newTestConfig("s3_bucket: michaeldwan.com", func(c *Config, d configMap) {
-		c.loadS3Bucket(d)
+func TestConfigS3Bucket(t *testing.T) {
+	newTestConfig("s3_bucket: michaeldwan.com", func(c Config, seq sequence) {
+		c.loadS3Bucket(seq)
 		assert.Equal(t, "michaeldwan.com", c.S3Bucket)
 	})
 }
 
-func TestS3BucketMissing(t *testing.T) {
-	newTestConfig("s3_bucket: ", func(c *Config, d configMap) {
+func TestConfigS3BucketMissing(t *testing.T) {
+	newTestConfig("s3_bucket: ", func(c Config, seq sequence) {
 		assert.Panics(t, func() {
-			c.loadS3Bucket(d)
+			c.loadS3Bucket(seq)
 		})
 	})
 
-	newTestConfig("", func(c *Config, d configMap) {
+	newTestConfig("", func(c Config, seq sequence) {
 		assert.Panics(t, func() {
-			c.loadS3Bucket(d)
+			c.loadS3Bucket(seq)
 		})
 	})
 }
 
-func TestRedirects(t *testing.T) {
+func TestConfigRedirects(t *testing.T) {
 	var data = `
 redirects:
   left: right
   up: down
   /slash/prefix: noslash
 `
-	newTestConfig(data, func(c *Config, d configMap) {
-		c.loadRedirects(d)
+	newTestConfig(data, func(c Config, seq sequence) {
+		c.loadRedirects(seq)
 		assert.Len(t, c.redirects, 3)
 		assert.Equal(t, "right", c.Redirects()["left"])
 		assert.Equal(t, "down", c.Redirects()["up"])
@@ -111,32 +110,32 @@ redirects:
 	})
 }
 
-func TestRedirectsEmpty(t *testing.T) {
+func TestConfigRedirectsEmpty(t *testing.T) {
 	var data = "redirects:  "
-	newTestConfig(data, func(c *Config, d configMap) {
-		c.loadRedirects(d)
+	newTestConfig(data, func(c Config, seq sequence) {
+		c.loadRedirects(seq)
 		assert.Equal(t, 0, len(c.redirects))
 	})
 }
 
-func TestRedirectsWrongType(t *testing.T) {
+func TestConfigRedirectsWrongType(t *testing.T) {
 	var data = "redirects: 123"
-	newTestConfig(data, func(c *Config, d configMap) {
+	newTestConfig(data, func(c Config, seq sequence) {
 		assert.Panics(t, func() {
-			c.loadRedirects(d)
+			c.loadRedirects(seq)
 		})
 		assert.Equal(t, 0, len(c.redirects))
 	})
 }
 
-func TestIgnore(t *testing.T) {
+func TestConfigIgnore(t *testing.T) {
 	var data = `
 ignore:
   - "*.html"
   - "assets/*"
 `
-	newTestConfig(data, func(c *Config, d configMap) {
-		c.loadIgnore(d)
+	newTestConfig(data, func(c Config, seq sequence) {
+		c.loadIgnore(seq)
 		assert.Equal(t, true, c.ShouldIgnore("index.html"))
 		assert.Equal(t, true, c.ShouldIgnore("assets/image.png"))
 		assert.Equal(t, false, c.ShouldIgnore("style.css"))
@@ -149,12 +148,12 @@ ignore:
 	})
 }
 
-func TestIgnoreEmpty(t *testing.T) {
+func TestConfigIgnoreEmpty(t *testing.T) {
 	var data = `
 ignore:
 `
-	newTestConfig(data, func(c *Config, d configMap) {
-		c.loadIgnore(d)
+	newTestConfig(data, func(c Config, seq sequence) {
+		c.loadIgnore(seq)
 		assert.Equal(t, false, c.ShouldIgnore("index.html"))
 		assert.Equal(t, false, c.ShouldIgnore("assets/image.png"))
 		assert.Equal(t, false, c.ShouldIgnore("style.css"))
@@ -167,14 +166,14 @@ ignore:
 	})
 }
 
-func TestGzipList(t *testing.T) {
+func TestConfigGzipList(t *testing.T) {
 	var data = `
 gzip:
   - "*.html"
   - "assets/*"
 `
-	newTestConfig(data, func(c *Config, d configMap) {
-		c.loadGzip(d)
+	newTestConfig(data, func(c Config, seq sequence) {
+		c.loadGzip(seq)
 		assert.Equal(t, true, c.ShouldGzip("index.html"))
 		assert.Equal(t, true, c.ShouldGzip("assets/image.png"))
 		assert.Equal(t, false, c.ShouldGzip("style.css"))
@@ -182,12 +181,12 @@ gzip:
 	})
 }
 
-func TestGzipTrue(t *testing.T) {
+func TestConfigGzipTrue(t *testing.T) {
 	var data = `
 gzip: true
 `
-	newTestConfig(data, func(c *Config, d configMap) {
-		c.loadGzip(d)
+	newTestConfig(data, func(c Config, seq sequence) {
+		c.loadGzip(seq)
 		assert.Equal(t, true, c.ShouldGzip("index.html"))
 		assert.Equal(t, false, c.ShouldGzip("assets/image.png"))
 		assert.Equal(t, true, c.ShouldGzip("style.css"))
@@ -196,52 +195,68 @@ gzip: true
 	})
 }
 
-func TestGzipFalse(t *testing.T) {
+func TestConfigGzipFalse(t *testing.T) {
 	var data = `
 gzip: false
 `
-	newTestConfig(data, func(c *Config, d configMap) {
-		c.loadGzip(d)
+	newTestConfig(data, func(c Config, seq sequence) {
+		c.loadGzip(seq)
 		assert.Empty(t, c.gzipPatterns.globs)
 	})
 }
 
-func TestGzipMissing(t *testing.T) {
+func TestConfigGzipMissing(t *testing.T) {
 	var data = ""
-	newTestConfig(data, func(c *Config, d configMap) {
-		c.loadGzip(d)
+	newTestConfig(data, func(c Config, seq sequence) {
+		c.loadGzip(seq)
 		assert.Empty(t, c.gzipPatterns.globs)
 	})
 }
 
 func TestConfigMaxAgePatterns(t *testing.T) {
 	var data = `
-max-age:
+max_age:
   "*.html": 123
   "*.css": 456
 `
-	newTestConfig(data, func(c *Config, d configMap) {
-		c.loadMaxAge(d)
+	newTestConfig(data, func(c Config, seq sequence) {
+		c.loadMaxAge(seq)
 		assert.Equal(t, 123, c.maxAgePatterns.get("index.html"))
 		assert.Equal(t, 456, c.maxAgePatterns.get("style.css"))
 		assert.Equal(t, 0, c.maxAgePatterns.get("missing.go"))
 	})
 }
 
+func TestConfigMaxAgePatternPriority(t *testing.T) {
+	var data = `
+max_age:
+  "abc/index.html": 456
+  "index.html": 123
+  "*": 789
+`
+	newTestConfig(data, func(c Config, seq sequence) {
+		c.loadMaxAge(seq)
+		assert.Equal(t, 123, c.maxAgePatterns.get("index.html"))
+		assert.Equal(t, 456, c.maxAgePatterns.get("abc/index.html"))
+		assert.Equal(t, 123, c.maxAgePatterns.get("xyz/index.html"))
+		assert.Equal(t, 789, c.maxAgePatterns.get("xyz/styles.css"))
+	})
+}
+
 func TestConfigMaxAgeDefault(t *testing.T) {
 	var data = `
-max-age: 123
+max_age: 123
 `
-	newTestConfig(data, func(c *Config, d configMap) {
-		c.loadMaxAge(d)
+	newTestConfig(data, func(c Config, seq sequence) {
+		c.loadMaxAge(seq)
 		assert.Equal(t, 123, c.maxAgePatterns.defaultValue)
 	})
 }
 
 func TestConfigMaxAgeMissing(t *testing.T) {
 	var data = ""
-	newTestConfig(data, func(c *Config, d configMap) {
-		c.loadMaxAge(d)
+	newTestConfig(data, func(c Config, seq sequence) {
+		c.loadMaxAge(seq)
 		assert.Equal(t, 0, c.maxAgePatterns.defaultValue)
 	})
 }

@@ -16,7 +16,7 @@ func newWorkingDir(name string) workingDir {
 	digest := md5.Sum([]byte(name))
 	hexDigest := hex.EncodeToString(digest[:])
 	wd := workingDir{}
-	wd.path = fmt.Sprintf("/tmp/webmaster/%s", hexDigest)
+	wd.path = fmt.Sprintf("/tmp/static/%s", hexDigest)
 	wd.clean()
 	wd.make()
 	return wd

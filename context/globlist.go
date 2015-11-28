@@ -24,12 +24,6 @@ func newGlobList(defaultValue interface{}) globlist {
 	}
 }
 
-func (g *globlist) loadFromMapStringInterface(in map[string]interface{}) {
-	for pattern, value := range in {
-		g.add(pattern, value)
-	}
-}
-
 func (g *globlist) loadFromStringSlice(in []string, value interface{}) {
 	for _, pattern := range in {
 		g.add(pattern, value)

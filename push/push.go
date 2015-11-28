@@ -2,10 +2,12 @@ package push
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
-	"github.com/michaeldwan/webmaster/context"
+	"github.com/michaeldwan/static/context"
+	"github.com/michaeldwan/static/printer"
 )
 
 type stats struct {
@@ -17,11 +19,9 @@ type stats struct {
 }
 
 func Perform(ctx *context.Context) {
-	defer ctx.Clean()
-
-	fmt.Printf("Source: %s\n", ctx.Config.SourceDirectory)
-	fmt.Printf("Destination: %s (%s)\n", ctx.Config.S3Bucket, ctx.Config.S3Region)
-
+	printer.Infof("Source: %s\n", ctx.Config.SourceDirectory)
+	printer.Infof("Destination: %s (%s)\n", ctx.Config.S3Bucket, ctx.Config.S3Region)
+	fmt.Println(ctx.Config.MaxAge("index.html"))
 	manifest := newManifest(ctx)
 	printScanMsg(manifest, false)
 	ticker := time.NewTicker(50 * time.Millisecond)
@@ -35,39 +35,58 @@ func Perform(ctx *context.Context) {
 	printScanMsg(manifest, true)
 
 	stats := &stats{}
-	fmt.Println("Parallel uploads:", ctx.Flags.Concurrency)
+	printer.Debugln("Parallel uploads:", ctx.Flags.Concurrency)
 	if ctx.Flags.DryRun {
-		fmt.Println("*** Dry Run, operations are simulated ***")
+		printer.Infoln("*** Dry Run, operations are simulated ***")
 	}
-	queue := make(chan Entry, 500)
+
+	queue := make(chan Entry, len(manifest.entries))
+	for _, entry := range manifest.entries {
+		queue <- *entry
+	}
+	close(queue)
+	abort := make(chan error)
+	done := make(chan bool)
 	var wg sync.WaitGroup
 	wg.Add(len(manifest.entries))
-	go func() {
-		for _, entry := range manifest.entries {
-			queue <- *entry
-		}
-	}()
 
-	for i := 0; i < ctx.Flags.Concurrency; i++ {
+	for worker := 0; worker < ctx.Flags.Concurrency; worker++ {
 		go func() {
-			for entry := range queue {
-				if err := pushEntry(ctx, entry, stats); err != nil {
-					panic(err)
+			for {
+				select {
+				case entry, ok := <-queue:
+					if !ok {
+						return
+					}
+					if err := pushEntry(ctx, entry, stats); err != nil {
+						abort <- err
+					}
+					wg.Done()
+				case <-done:
+					return
 				}
-				wg.Done()
 			}
 		}()
 	}
 
-	wg.Wait()
+	go func() {
+		wg.Wait()
+		close(abort)
+	}()
+
+	if err := <-abort; err != nil {
+		close(done)
+		printer.Infoln(err)
+		os.Exit(1)
+		return
+	}
 
 	printStats(*stats)
 }
 
 func pushEntry(ctx *context.Context, e Entry, stats *stats) error {
-	attempt := 1
-	for {
-		var err error = nil
+	for attempt := 1; attempt <= 3; attempt++ {
+		var err error
 		switch e.Operation() {
 		case Create:
 			if err = putFile(ctx, e.Src); err != nil {
@@ -91,11 +110,6 @@ func pushEntry(ctx *context.Context, e Entry, stats *stats) error {
 		if err == nil {
 			return nil
 		}
-		if err != nil {
-			attempt++
-			if attempt > 3 {
-				return err
-			}
-		}
 	}
+	return fmt.Errorf("Failed to push %s after 3 attempts. Aborting.\n", e.Key)
 }

@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/michaeldwan/webmaster/context"
+	"github.com/michaeldwan/static/context"
 )
 
 func buildSource(ctx *context.Context) <-chan *File {

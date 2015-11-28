@@ -21,7 +21,7 @@ vendor/src/github.com/spf13/cast:
 vendor/src/github.com/spf13/jWalterWeatherman:
   repository: https://github.com/spf13/jWalterWeatherman
   revision: 3d60171a64319ef63c78bd45bd60e6eab1e75f8b
-    
+
 ################################
 # github.com/aws/aws-sdk-go
 ################################
@@ -31,14 +31,6 @@ vendor/src/github.com/aws/aws-sdk-go:
 vendor/src/github.com/vaughan0/go-ini:
   repository: https://github.com/vaughan0/go-ini.git
   revision: a98ad7ee00ec53921f08832bc06ecf7fd600e6a1
-
-
-################################
-# github.com/go-yaml/yaml
-################################
-vendor/src/github.com/go-yaml/yaml:
-  repository: https://github.com/go-yaml/yaml.git
-  revision: 7ad95dd0798a40da1ccdff6dff35fd177b5edf40
 
 ################################
 # github.com/stretchr/testify

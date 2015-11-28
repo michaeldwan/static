@@ -1,50 +1,19 @@
 package context
 
 import (
-	"fmt"
-	"io/ioutil"
-	"log"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/go-yaml/yaml"
+	"github.com/michaeldwan/static/printer"
 	"github.com/spf13/cast"
 )
 
-const ConfigFileName string = "webmaster.yml"
-
-type configMissingError struct {
-	err string
-}
-
-func (e configMissingError) Error() string { return e.err }
-func newConfigMissingError(keyPath string) error {
-	return configMissingError{fmt.Sprintf("%s is missing", keyPath)}
-}
-
-type configMap map[interface{}]interface{}
-
-func (c *configMap) getE(keyPath string) (interface{}, error) {
-	keys := strings.Split(keyPath, ":")
-	kv := *c
-	for index, key := range keys {
-		if val, ok := kv[key]; ok {
-			if index == len(keys)-1 {
-				return val, nil
-			}
-			if kv, ok = val.(map[interface{}]interface{}); !ok {
-				break
-			}
-		}
-	}
-	return nil, newConfigMissingError(keyPath)
-}
-
-func (c *configMap) get(keyPath string) interface{} {
-	val, _ := c.getE(keyPath)
-	return val
-}
+const (
+	ConfigFileName  string = "static.yml"
+	s3RegionDefault string = "us-east-1"
+)
 
 type Config struct {
 	Path            string
@@ -57,47 +26,35 @@ type Config struct {
 	maxAgePatterns  globlist
 }
 
-func newConfig() *Config {
-	return &Config{
-		ignorePatterns: newGlobList(false),
-		gzipPatterns:   newGlobList(false),
-		maxAgePatterns: newGlobList(0),
-		redirects:      make(map[string]string),
-	}
-}
-
-func (c *Config) loadFile(path string) {
+func (c *Config) loadFromPath(path string) {
 	path, _ = filepath.Abs(path)
-	data, err := ioutil.ReadFile(path)
+	file, err := os.Open(path)
 	if os.IsNotExist(err) {
-		panic(fmt.Sprintf("Config file %s not found\n", path))
+		printer.Infof("Config file %s not found\n", path)
+		os.Exit(1)
 	}
-	c.loadPathAndData(path, data)
+	c.load(path, file)
 }
 
-func (c *Config) loadPathAndData(path string, data []byte) {
-	raw := make(configMap)
-	if err := yaml.Unmarshal(data, &raw); err != nil {
-		log.Panic(err)
+func (c *Config) load(path string, reader io.Reader) {
+	seq, err := parseConfig(reader)
+	if err != nil {
+		panic(err)
 	}
-	c.load(path, raw)
-}
-
-func (c *Config) load(path string, raw configMap) {
 	c.Path = path
-	c.loadSourceDirectory(path, raw)
-	c.loadS3Region(raw)
-	c.loadS3Bucket(raw)
-	c.loadRedirects(raw)
-	c.loadIgnore(raw)
-	c.loadGzip(raw)
-	c.loadMaxAge(raw)
+	c.loadSourceDirectory(path, seq)
+	c.loadS3Region(seq)
+	c.loadS3Bucket(seq)
+	c.loadRedirects(seq)
+	c.loadIgnore(seq)
+	c.loadGzip(seq)
+	c.loadMaxAge(seq)
 }
 
-func (c *Config) loadSourceDirectory(rootDir string, raw configMap) {
-	value := cast.ToString(raw.get("source_directory"))
+func (c *Config) loadSourceDirectory(rootDir string, seq sequence) {
+	value := cast.ToString(seq.valForKey("source_directory"))
 	if value == "" {
-		log.Panicln("Configuration error: source_directory is missing")
+		panic("Configuration error: source_directory is missing")
 	}
 	if !strings.HasPrefix(value, "/") {
 		value = filepath.Join(filepath.Dir(rootDir), value)
@@ -105,41 +62,36 @@ func (c *Config) loadSourceDirectory(rootDir string, raw configMap) {
 	c.SourceDirectory = value
 }
 
-const S3RegionDefault string = "us-east-1"
-
-func (c *Config) loadS3Region(raw configMap) {
-	val := cast.ToString(raw.get("s3_region"))
+func (c *Config) loadS3Region(seq sequence) {
+	val := cast.ToString(seq.valForKey("s3_region"))
 	if val == "" {
-		val = S3RegionDefault
+		val = s3RegionDefault
 	}
 	c.S3Region = val
 }
 
-func (c *Config) loadS3Bucket(raw configMap) {
-	val := cast.ToString(raw.get("s3_bucket"))
+func (c *Config) loadS3Bucket(seq sequence) {
+	val := cast.ToString(seq.valForKey("s3_bucket"))
 	if val == "" {
-		log.Panic("Configuration error: s3_bucket is missing")
+		panic("Configuration error: s3_bucket is missing")
 	}
 	c.S3Bucket = val
 }
 
-func (c *Config) loadRedirects(raw configMap) {
-	if raw.get("redirects") == nil {
-		return
-	}
-
-	if redirects, ok := raw.get("redirects").(configMap); ok {
-		for sourcePath, destPath := range redirects {
-			path := cast.ToString(sourcePath)
-			dest := cast.ToString(destPath)
-			if strings.HasPrefix(path, "/") {
-				c.redirects[path[1:]] = dest
-			} else {
-				c.redirects[path] = dest
-			}
+func (c *Config) loadRedirects(seq sequence) {
+	// if seq.valForKey("redirects") != "" {
+	// 	panic("Configuration error: redirects should be a list of paths and destinations")
+	// }
+	// TODO: assert right content types (not string val, not value sequence)
+	c.redirects = make(map[string]string)
+	for _, el := range seq.seqForKey("redirects") {
+		path := cast.ToString(el.key)
+		dest := cast.ToString(el.value)
+		if strings.HasPrefix(path, "/") {
+			c.redirects[path[1:]] = dest
+		} else {
+			c.redirects[path] = dest
 		}
-	} else {
-		log.Panic("Configuration error: redirects should be a list of paths and destinations")
 	}
 }
 
@@ -147,11 +99,15 @@ func (c *Config) Redirects() map[string]string {
 	return c.redirects
 }
 
-func (c *Config) loadIgnore(raw configMap) {
-	ignore := raw.get("ignore")
-	c.ignorePatterns.loadFromStringSlice(cast.ToStringSlice(ignore), true)
+func (c *Config) loadIgnore(seq sequence) {
+	c.ignorePatterns = newGlobList(false)
+	if el, ok := seq.elForKey("ignore"); ok {
+		c.ignorePatterns.loadFromStringSlice(el.stringSliceForSeqValues(), true)
+	}
+
 	// Add default ignore patterns
 	// TODO: add dot prefix pattern
+	// TODO: default windows patterns?
 	c.ignorePatterns.add(".DS_Store", true)
 	c.ignorePatterns.add(".git", true)
 	c.ignorePatterns.add(".svn", true)
@@ -161,18 +117,20 @@ func (c *Config) ShouldIgnore(path string) bool {
 	return cast.ToBool(c.ignorePatterns.get(path))
 }
 
-func (c *Config) loadGzip(raw configMap) {
-	v := raw.get("gzip")
-	if gzDefault, err := cast.ToBoolE(v); err == nil {
-		if gzDefault {
-			c.gzipPatterns.add(".html", true)
-			c.gzipPatterns.add(".txt", true)
-			c.gzipPatterns.add(".css", true)
-			c.gzipPatterns.add(".js", true)
-			c.gzipPatterns.add(".htm", true)
-		}
-	} else if gzSlice, err := cast.ToStringSliceE(v); err == nil {
-		c.gzipPatterns.loadFromStringSlice(gzSlice, true)
+func (c *Config) loadGzip(seq sequence) {
+	c.gzipPatterns = newGlobList(false)
+	el, ok := seq.elForKey("gzip")
+	if !ok {
+		return
+	}
+	if cast.ToBool(el.value) {
+		c.gzipPatterns.add(".html", true)
+		c.gzipPatterns.add(".txt", true)
+		c.gzipPatterns.add(".css", true)
+		c.gzipPatterns.add(".js", true)
+		c.gzipPatterns.add(".htm", true)
+	} else if list := el.stringSliceForSeqValues(); len(list) > 0 {
+		c.gzipPatterns.loadFromStringSlice(list, true)
 	}
 }
 
@@ -180,17 +138,20 @@ func (c *Config) ShouldGzip(path string) bool {
 	return cast.ToBool(c.gzipPatterns.get(path))
 }
 
-func (c *Config) loadMaxAge(raw configMap) {
-	v := raw.get("max-age")
-	if defaultMaxAge, err := cast.ToIntE(v); err == nil {
+func (c *Config) loadMaxAge(seq sequence) {
+	c.maxAgePatterns = newGlobList(0)
+	el, ok := seq.elForKey("max_age")
+	if !ok {
+		return
+	}
+	if defaultMaxAge := cast.ToInt(el.value); defaultMaxAge > 0 {
 		c.maxAgePatterns.defaultValue = defaultMaxAge
-	} else if patterns, ok := v.(configMap); ok {
-		for pattern, maxAge := range patterns {
-			fmt.Println("pattern", pattern, maxAge)
-			c.maxAgePatterns.add(cast.ToString(pattern), cast.ToInt(maxAge))
+	} else if len(el.sequence) > 0 {
+		for _, subEl := range el.sequence {
+			if age := cast.ToInt(subEl.value); age > 0 {
+				c.maxAgePatterns.add(subEl.key, age)
+			}
 		}
-	} else {
-		log.Panicf("invalid max-age config: %T", v)
 	}
 }
 

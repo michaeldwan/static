@@ -1,1 +1,1 @@
-# webmaster
+# Static

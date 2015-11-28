@@ -1,21 +1,15 @@
-- globlist priority (top to bottom, see sample site max-age)
-- switch to go 1.5 w/ vendoring
+- bug: sync log output
+- handle connection failures: http://cl.ly/image/3p3q2z1U0j0J
 - redirection/rewrite rules
 - better AWS error reporting
-- better log output (verbose and quiet)
-- color
 - stats after action
-- max age restrictions w/ support for leaving some patterns
-- force option
-- prune stale files on s3
-- upload/scan concurrently
-- pass upload concurrency level via params
+- prune stale files on s3 w/ max age restrictions w/ support for leaving some patterns
 - sanitize s3 key names (Alphanumeric characters [0-9a-zA-Z], Special characters `!, -, _, ., *, ', (, and )`)
 - zopfli
-- parallel uploads w/ limit (https://nesv.github.io/golang/2014/02/25/worker-queues-in-go.html)
-- retry/requeue ops on failure
 - smarter invalidations
 - aws credential setup (check out aws cli)
+  # AWS Access Key ID [None]: accesskey
+  # AWS Secret Access Key [None]: secretkey
 
 
 - configure s3 for website hosting
@@ -28,6 +22,21 @@ commands:
 - Push
 - init
 - setup
+
+
+init
+
+
+setup/configure
+- what domain will you host your content on?
+- what other domains should redirect to your content? (eg www.{domain})
+- what AWS region do you want to use? (default us-east-1)
+- do you want to use cloudfront CDN?
+
+
+
+
+
 
 Source: /Users/md/my/directory
 Destination: michaeldwan.com, us-east-1

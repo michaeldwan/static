@@ -3,7 +3,7 @@ package push
 import (
 	"sync"
 
-	"github.com/michaeldwan/webmaster/context"
+	"github.com/michaeldwan/static/context"
 )
 
 type Manifest struct {

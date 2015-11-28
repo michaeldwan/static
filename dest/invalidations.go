@@ -107,7 +107,7 @@ func invalidateDistribution(id string, paths []string) {
 func invalidationId() string {
 	epoch := time.Now().Unix()
 	// TODO: use a timestamp and digest of paths for the id
-	return fmt.Sprintf("webmaster-%d", epoch)
+	return fmt.Sprintf("static-%d", epoch)
 }
 
 func determineInvalidationPaths(keys []string) []string {

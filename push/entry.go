@@ -3,7 +3,7 @@ package push
 import (
 	"bytes"
 
-	"github.com/michaeldwan/webmaster/context"
+	"github.com/michaeldwan/static/context"
 )
 
 type Operation int
