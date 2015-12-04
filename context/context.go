@@ -1,7 +1,6 @@
 package context
 
 import (
-	"log"
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -15,6 +14,10 @@ type Flags struct {
 	Force       bool
 	Concurrency int
 	Verbose     bool
+
+	AWSAccessKeyId     string
+	AWSSecretAccessKey string
+	AWSSessionToken    string
 }
 
 type Context struct {
@@ -44,12 +47,16 @@ func (c *Context) Clean() {
 
 func (c *Context) AwsCredentials() *credentials.Credentials {
 	if c.awsCredentials == nil {
-		// TODO: detect credentials via other providers before aborting
-		creds := credentials.NewEnvCredentials()
-		if _, err := creds.Get(); err != nil {
-			log.Fatal(err)
-		}
-		c.awsCredentials = creds
+		c.awsCredentials = credentials.NewChainCredentials(
+			[]credentials.Provider{
+				&credentials.StaticProvider{Value: credentials.Value{
+					AccessKeyID:     c.Flags.AWSAccessKeyId,
+					SecretAccessKey: c.Flags.AWSSecretAccessKey,
+					SessionToken:    c.Flags.AWSSessionToken,
+				}},
+				&credentials.EnvProvider{},
+				&credentials.SharedCredentialsProvider{},
+			})
 	}
 	return c.awsCredentials
 }

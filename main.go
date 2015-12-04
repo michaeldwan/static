@@ -57,6 +57,9 @@ func main() {
 	pushCmd.Flags().BoolVarP(&flags.DryRun, "dry-run", "n", false, "simulate operations")
 	pushCmd.Flags().BoolVarP(&flags.Force, "force", "f", false, "push everything")
 	pushCmd.Flags().IntVarP(&flags.Concurrency, "parallel-uploads", "p", 2, "parallel uploads")
+	StaticCmd.PersistentFlags().StringVarP(&flags.AWSAccessKeyId, "aws-access-key-id", "", "", "AWS Access Key ID")
+	StaticCmd.PersistentFlags().StringVarP(&flags.AWSSecretAccessKey, "aws-secret-access-key", "", "", "AWS Secret Access Key")
+	StaticCmd.PersistentFlags().StringVarP(&flags.AWSSessionToken, "aws-session-token", "", "", "AWS Session Token")
 	StaticCmd.AddCommand(pushCmd)
 	StaticCmd.Execute()
 }
