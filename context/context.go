@@ -6,6 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/service/cloudfront"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
@@ -21,6 +22,7 @@ type Context struct {
 	workingDir     workingDir
 	awsCredentials *credentials.Credentials
 	s3Client       *s3.S3
+	cfClient       *cloudfront.CloudFront
 	Flags          Flags
 }
 
@@ -61,4 +63,14 @@ func (c *Context) S3Client() *s3.S3 {
 		})
 	}
 	return c.s3Client
+}
+
+func (c *Context) CloudFrontClient() *cloudfront.CloudFront {
+	if c.cfClient == nil {
+		c.cfClient = cloudfront.New(&aws.Config{
+			Credentials: c.AwsCredentials(),
+			// LogLevel: 1,
+		})
+	}
+	return c.cfClient
 }

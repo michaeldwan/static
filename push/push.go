@@ -60,7 +60,9 @@ func Perform(ctx *context.Context) {
 					}
 					if err := pushEntry(ctx, entry, stats); err != nil {
 						abort <- err
+						return
 					}
+					// fmt.Printf("stats %+v\n", stats)
 					wg.Done()
 				case <-done:
 					return
@@ -82,6 +84,8 @@ func Perform(ctx *context.Context) {
 	}
 
 	printStats(*stats)
+
+	createInvalidations(ctx.CloudFrontClient(), ctx.Config.S3Region, ctx.Config.S3Bucket, manifest)
 }
 
 func pushEntry(ctx *context.Context, e Entry, stats *stats) error {
@@ -89,17 +93,17 @@ func pushEntry(ctx *context.Context, e Entry, stats *stats) error {
 		var err error
 		switch e.Operation() {
 		case Create:
-			if err = putFile(ctx, e.Src); err != nil {
+			if err = putFile(ctx, e.Src); err == nil {
 				stats.bytes += e.Src.Size()
 				stats.created++
 			}
 		case Update, ForceUpdate:
-			if err = putFile(ctx, e.Src); err != nil {
+			if err = putFile(ctx, e.Src); err == nil {
 				stats.bytes += e.Src.Size()
 				stats.updated++
 			}
 		case Delete:
-			if err = deleteKey(ctx, e.Key); err != nil {
+			if err = deleteKey(ctx, e.Key); err == nil {
 				stats.deleted++
 			}
 		case Skip:

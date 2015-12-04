@@ -1,6 +1,8 @@
 package push
 
 import (
+	"bytes"
+	"crypto/md5"
 	"sync"
 
 	"github.com/michaeldwan/static/context"
@@ -78,12 +80,24 @@ func (m *Manifest) addDestObject(obj *DestObject) {
 	m.objCount++
 }
 
-func (m *Manifest) entriesForOperation(op Operation) []Entry {
+func (m *Manifest) entriesForOperations(ops ...Operation) []Entry {
 	var entries []Entry
 	for _, entry := range m.entries {
-		if entry.Operation() == op {
-			entries = append(entries, *entry)
+		for _, op := range ops {
+			if entry.Operation() == op {
+				entries = append(entries, *entry)
+				break
+			}
 		}
 	}
 	return entries
+}
+
+func (m *Manifest) digest() [16]byte {
+	var b bytes.Buffer
+	for _, entry := range m.entries {
+		b.Write([]byte(entry.Key))
+		b.Write([]byte(string(entry.Operation())))
+	}
+	return md5.Sum(b.Bytes())
 }

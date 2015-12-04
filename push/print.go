@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/michaeldwan/static/printer"
 )
 
@@ -68,7 +69,7 @@ func sprintDesc(e Entry) string {
 }
 
 func printStats(stats stats) {
-	printer.Infof("Done: %d files created, %d updated, and %d deleted ~ %s\n", stats.created, stats.updated, stats.deleted, formatByteSize(float64(stats.bytes)))
+	printer.Infof("Done: %d files created, %d updated, %d deleted, and %d skipped ~ %s\n", stats.created, stats.updated, stats.deleted, stats.skipped, formatByteSize(float64(stats.bytes)))
 }
 
 const (
@@ -88,4 +89,23 @@ func formatByteSize(b float64) string {
 		return fmt.Sprintf("%.2fKB", b/kB)
 	}
 	return fmt.Sprintf("%.2fB", b)
+}
+
+func printAWSError(err error) {
+	if err == nil {
+		return
+	}
+
+	if awsErr, ok := err.(awserr.Error); ok {
+		// Generic AWS error with Code, Message, and original error (if any)
+		fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
+		if reqErr, ok := err.(awserr.RequestFailure); ok {
+			// A service error occurred
+			fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
+		}
+	} else {
+		// This case should never be hit, the SDK should always return an
+		// error which satisfies the awserr.Error interface.
+		fmt.Println(err.Error())
+	}
 }

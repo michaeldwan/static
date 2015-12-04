@@ -2,6 +2,7 @@ package push
 
 import (
 	"encoding/hex"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -53,7 +54,6 @@ func putFile(ctx *context.Context, file *File) error {
 	reader := file.Body()
 	defer reader.Close()
 
-	// TODO: retry logic here...
 	input := &s3.PutObjectInput{
 		ACL:           aws.String("public-read"),
 		Bucket:        aws.String(ctx.S3Bucket),
@@ -72,7 +72,6 @@ func deleteKey(ctx *context.Context, key string) error {
 		return nil
 	}
 
-	// TODO: retry logic here...
 	input := &s3.DeleteObjectInput{
 		Bucket: aws.String(ctx.S3Bucket),
 		Key:    aws.String(key),
@@ -81,14 +80,6 @@ func deleteKey(ctx *context.Context, key string) error {
 	return err
 }
 
-// func (d *Bucket) WebsiteEndpoint() string {
-// 	return d.Bucket + ".s3-website-" + d.Region + ".amazonaws.com"
-// }
-
-// func TestDestinationWebsiteEndpoint(t *testing.T) {
-// 	d := &Bucket{Bucket: "my.bucket", Region: "us-west-2"}
-// 	val := d.WebsiteEndpoint()
-// 	if val != "my.bucket.s3-website-us-west-2.amazonaws.com" {
-// 		t.Errorf("expected endpoint == my.bucket.s3-website-us-west-2.amazonaws.com, was '%v'", val)
-// 	}
-// }
+func s3WebsiteEndpoint(region, bucket string) string {
+	return fmt.Sprintf("%s.s3-website-%s.amazonaws.com", bucket, region)
+}
