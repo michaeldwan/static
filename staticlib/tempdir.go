@@ -1,4 +1,4 @@
-package context
+package staticlib
 
 import (
 	"crypto/md5"
@@ -36,8 +36,6 @@ func (w workingDir) make() {
 	}
 }
 
-func (w workingDir) clean() {
-	if err := os.RemoveAll(w.path); err != nil {
-		panic(err)
-	}
+func (w workingDir) clean() error {
+	return os.RemoveAll(w.path)
 }

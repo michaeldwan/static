@@ -1,4 +1,4 @@
-package push
+package staticlib
 
 import (
 	"bytes"

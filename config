@@ -2,11 +2,9 @@ package context
 
 import (
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/michaeldwan/static/printer"
 	"github.com/spf13/cast"
 )
 
@@ -26,14 +24,10 @@ type Config struct {
 	maxAgePatterns  globlist
 }
 
-func (c *Config) loadFromPath(path string) {
-	path, _ = filepath.Abs(path)
-	file, err := os.Open(path)
-	if os.IsNotExist(err) {
-		printer.Infof("Config file %s not found\n", path)
-		os.Exit(1)
-	}
-	c.load(path, file)
+func newConfig(path string, reader io.Reader) *Config {
+	cfg := &Config{}
+	cfg.load(path, reader)
+	return cfg
 }
 
 func (c *Config) load(path string, reader io.Reader) {
@@ -155,6 +149,6 @@ func (c *Config) loadMaxAge(seq sequence) {
 	}
 }
 
-func (c *Config) MaxAge(path string) int {
+func (c Config) MaxAge(path string) int {
 	return cast.ToInt(c.maxAgePatterns.get(path))
 }

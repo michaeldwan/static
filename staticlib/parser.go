@@ -1,4 +1,4 @@
-package context
+package staticlib
 
 // This parses the simplified yaml-like config format. This is used instead of
 // a full yaml parser in order to preserve to-to-bottom priority since the Go
@@ -9,7 +9,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 	"strings"
 	"unicode"
@@ -52,14 +51,6 @@ func (el element) stringSliceForSeqValues() []string {
 		out = append(out, subEl.value)
 	}
 	return out
-}
-
-func parseConfigAtPath(path string) (sequence, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		panic(err)
-	}
-	return parseConfig(file)
 }
 
 func parseConfig(reader io.Reader) (sequence, error) {

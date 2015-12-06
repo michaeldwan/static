@@ -1,4 +1,4 @@
-package push
+package staticlib
 
 import (
 	"html/template"
@@ -18,7 +18,7 @@ func renderRedirect(destUrl string, writer io.Writer) {
 	}
 }
 
-func newRedirect(writer *os.File, key, destUrl string) *File {
+func newRedirect(writer *os.File, key, destUrl string) File {
 	defer writer.Close()
 	renderRedirect(destUrl, writer)
 	file := newFile(key, writer.Name())
