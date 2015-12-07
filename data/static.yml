@@ -1,0 +1,12 @@
+source_directory: {{.sourceDirectory}}
+# ignore:
+#   - "*.DS_Store"
+
+# redirects:
+#   /twitter2: https://twitter.com/michaeldwan
+#   /essays/123: /writings/456
+#   /essays/456: google.com
+# gzip: *.html
+
+# s3_region: {{.s3Region}}
+# s3_bucket: {{.s3Bucket}}
