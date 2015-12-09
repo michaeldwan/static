@@ -137,6 +137,8 @@ func (c *Config) loadGzip(seq sequence) {
 		c.gzipPatterns.add(".htm", true)
 	} else if list := el.stringSliceForSeqValues(); len(list) > 0 {
 		c.gzipPatterns.loadFromStringSlice(list, true)
+	} else if len(el.value) > 0 {
+		c.gzipPatterns.add(el.value, true)
 	}
 }
 
