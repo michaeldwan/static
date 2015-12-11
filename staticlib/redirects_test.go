@@ -27,8 +27,7 @@ func TestNewRedirect(t *testing.T) {
 	defer os.Remove(f.Name())
 	r := newRedirect(f, "redirect", "http://destination.url")
 	actual, _ := ioutil.ReadFile(f.Name())
-	assert.Equal(t, f.Name(), r.path)
+	assert.Equal(t, f.Name(), r.Path)
 	assert.Equal(t, expected, string(actual))
-	assert.Equal(t, "text/html", r.ContentType())
-	assert.Equal(t, "http://destination.url", r.RedirectUrl())
+	assert.Equal(t, "http://destination.url", r.RedirectUrl)
 }
