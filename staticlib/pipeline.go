@@ -5,8 +5,10 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"os"
+	"path/filepath"
 )
 
 type pipelineAction func(file File) File
@@ -25,13 +27,16 @@ func pipelineStage(in pipelineChan, f pipelineAction) pipelineChan {
 
 func setContentType(in pipelineChan) pipelineChan {
 	return pipelineStage(in, func(inFile File) File {
-		body := inFile.Body()
-		defer body.Close()
-		buff := make([]byte, 512)
-		if _, err := body.Read(buff); err != nil {
-			panic(err)
+		inFile.ContentType = mime.TypeByExtension(filepath.Ext(inFile.Path))
+		if inFile.ContentType == "" {
+			body := inFile.Body()
+			defer body.Close()
+			buff := make([]byte, 512)
+			if _, err := body.Read(buff); err != nil {
+				panic(err)
+			}
+			inFile.ContentType = http.DetectContentType(buff)
 		}
-		inFile.contentType = http.DetectContentType(buff)
 		return inFile
 	})
 }
