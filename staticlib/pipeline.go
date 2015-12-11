@@ -80,6 +80,8 @@ func gzipFile(workingDir workingDir, in File) File {
 	out.Size = getFileSize(writer.Name())
 	out.Path = writer.Name()
 	out.ContentEncoding = "gzip"
+	ratio := float64(out.Size) / float64(in.Size)
+	out.Notes = append(out.Notes, fmt.Sprintf("gzip -%.1f%%", ratio*100))
 	if in.Size <= out.Size {
 		return in
 	}

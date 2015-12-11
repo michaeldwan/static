@@ -14,6 +14,7 @@ type File struct {
 	Digest          []byte
 	CacheControl    string
 	RedirectUrl     string
+	Notes           []string
 }
 
 func newFile(key, path string) File {

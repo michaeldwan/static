@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/michaeldwan/static/printer"
 	"github.com/michaeldwan/static/staticlib"
@@ -102,6 +103,12 @@ func printPushEntryRestult(result staticlib.PushEntryResult, verbose bool) {
 	} else {
 		buffer.WriteString(formatByteSize(float64(result.Entry.Src.Size)))
 	}
+	if result.Entry.Src != nil && len(result.Entry.Src.Notes) > 0 {
+		buffer.WriteString(" [")
+		notes := strings.Join(result.Entry.Src.Notes, ", ")
+		buffer.WriteString(notes)
+		buffer.WriteString("]")
+	}
 	if err := result.Error; err != nil {
 		buffer.WriteString("\n    ")
 		buffer.WriteString(err.Error())
@@ -141,11 +148,11 @@ const (
 func formatByteSize(b float64) string {
 	switch {
 	case b >= gB:
-		return fmt.Sprintf("%.2fGB", b/gB)
+		return fmt.Sprintf("%.1fGB", b/gB)
 	case b >= mB:
-		return fmt.Sprintf("%.2fMB", b/mB)
+		return fmt.Sprintf("%.1fMB", b/mB)
 	case b >= kB:
-		return fmt.Sprintf("%.2fKB", b/kB)
+		return fmt.Sprintf("%.1fKB", b/kB)
 	}
-	return fmt.Sprintf("%.2fB", b)
+	return fmt.Sprintf("%.1fB", b)
 }
