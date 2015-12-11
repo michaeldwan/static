@@ -18,6 +18,7 @@ func TestGloblistPatternRegexp(t *testing.T) {
 		`index.htm?`:              `index\.htm[^\/]?`,
 		`/directory/index.html`:   `^\/directory\/index\.html`,
 		`/*.html`:                 `^\/[^\/]{0,}\.html`,
+		`application/xml+atom`:    `application\/xml\+atom`,
 	}
 
 	for input, expected := range tests {

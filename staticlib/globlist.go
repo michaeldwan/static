@@ -46,7 +46,7 @@ func (g *globlist) get(pattern string) interface{} {
 }
 
 var boundaryGlobRegexp = regexp.MustCompile(`^\*|\*$`)
-var escapeRegexp = regexp.MustCompile(`([\.\/])`)
+var escapeRegexp = regexp.MustCompile(`([\.\/\+])`)
 
 func globRegexpFromPattern(pattern string) *regexp.Regexp {
 	// TODO: use system path separator instead of hardcoded slash
