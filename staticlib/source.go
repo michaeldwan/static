@@ -24,10 +24,10 @@ func (s Source) clean() error {
 func (s Source) process(cfg Config) <-chan File {
 	in := make(chan File)
 	out := setContentType(in)
+	out = setSize(out)
 	out = setCacheControl(cfg, out)
 	out = gzipProcessor(s.workingDir, cfg, out)
 	out = digestProcessor(out)
-	out = setSize(out)
 
 	go func() {
 		s.scanDirectory(cfg, in)

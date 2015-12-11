@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 )
 
 type pipelineAction func(file File) File
@@ -37,13 +38,7 @@ func setContentType(in pipelineChan) pipelineChan {
 
 func setSize(in pipelineChan) pipelineChan {
 	return pipelineStage(in, func(inFile File) File {
-		body := inFile.Body()
-		defer body.Close()
-		if fi, err := body.Stat(); err != nil {
-			panic(err)
-		} else {
-			inFile.Size = fi.Size()
-		}
+		inFile.Size = getFileSize(inFile.Path)
 		return inFile
 	})
 }
@@ -66,24 +61,32 @@ func gzipProcessor(workingDir workingDir, cfg Config, in pipelineChan) pipelineC
 }
 
 func gzipFile(workingDir workingDir, in File) File {
+	out := in
 	reader := in.Body()
 	defer reader.Close()
 	writer := workingDir.tempFile()
 	defer writer.Close()
 	compressor := gzip.NewWriter(writer)
 	_, err := io.Copy(compressor, reader)
+	compressor.Close()
 	if err != nil {
 		panic(err)
 	}
-	compressor.Close()
-	out := in
+	out.Size = getFileSize(writer.Name())
 	out.Path = writer.Name()
 	out.ContentEncoding = "gzip"
-	// fmt.Printf("compression saved %%%f (%d, %d)\n", float64(out.Size()) / float64(in.Size()), out.Size(), in.Size())
 	if in.Size <= out.Size {
 		return in
 	}
 	return out
+}
+
+func getFileSize(path string) int64 {
+	fi, err := os.Stat(path)
+	if err != nil {
+		panic(err)
+	}
+	return fi.Size()
 }
 
 func digestProcessor(in pipelineChan) pipelineChan {
