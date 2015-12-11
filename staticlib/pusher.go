@@ -89,11 +89,11 @@ func (p *Pusher) pushEntry(e *Entry, simulate bool) PushEntryResult {
 	switch e.Operation {
 	case Create:
 		if result.Error = p.deployment.bucket.putFile(e.Src, simulate); result.Error == nil {
-			result.Stats = PushStats{Bytes: e.Src.Size(), Created: 1}
+			result.Stats = PushStats{Bytes: e.Src.Size, Created: 1}
 		}
 	case Update, ForceUpdate:
 		if result.Error = p.deployment.bucket.putFile(e.Src, simulate); result.Error == nil {
-			result.Stats = PushStats{Bytes: e.Src.Size(), Updated: 1}
+			result.Stats = PushStats{Bytes: e.Src.Size, Updated: 1}
 		}
 	case Delete:
 		if result.Error = p.deployment.bucket.deleteKey(e.Key, simulate); result.Error == nil {

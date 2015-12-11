@@ -71,13 +71,14 @@ func (b Bucket) putFile(file *File, simulate bool) error {
 	defer reader.Close()
 
 	input := &s3.PutObjectInput{
-		ACL:           aws.String("public-read"),
-		Bucket:        aws.String(b.name),
-		Body:          reader,
-		ContentLength: aws.Long(file.Size()),
-		ContentType:   aws.String(file.ContentType()),
-		Key:           aws.String(file.Key()),
-		CacheControl:  aws.String(file.CacheControl()),
+		ACL:             aws.String("public-read"),
+		Bucket:          aws.String(b.name),
+		Body:            reader,
+		ContentLength:   aws.Long(file.Size),
+		ContentType:     aws.String(file.ContentType),
+		Key:             aws.String(file.Key),
+		CacheControl:    aws.String(file.CacheControl),
+		ContentEncoding: aws.String(file.ContentEncoding),
 	}
 	_, err := s3Client.PutObject(input)
 	return err

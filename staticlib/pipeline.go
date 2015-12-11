@@ -42,7 +42,7 @@ func setSize(in pipelineChan) pipelineChan {
 		if fi, err := body.Stat(); err != nil {
 			panic(err)
 		} else {
-			inFile.size = fi.Size()
+			inFile.Size = fi.Size()
 		}
 		return inFile
 	})
@@ -50,15 +50,15 @@ func setSize(in pipelineChan) pipelineChan {
 
 func setCacheControl(cfg Config, in pipelineChan) pipelineChan {
 	return pipelineStage(in, func(inFile File) File {
-		maxAge := cfg.MaxAge(inFile.Key())
-		inFile.cacheControl = fmt.Sprintf("public; max-age=%d", maxAge)
+		maxAge := cfg.MaxAge(inFile.Key)
+		inFile.CacheControl = fmt.Sprintf("public; max-age=%d", maxAge)
 		return inFile
 	})
 }
 
 func gzipProcessor(workingDir workingDir, cfg Config, in pipelineChan) pipelineChan {
 	return pipelineStage(in, func(inFile File) File {
-		if cfg.ShouldGzip(inFile.Key()) {
+		if cfg.ShouldGzip(inFile.Key) {
 			return gzipFile(workingDir, inFile)
 		}
 		return inFile
@@ -77,10 +77,10 @@ func gzipFile(workingDir workingDir, in File) File {
 	}
 	compressor.Close()
 	out := in
-	out.path = writer.Name()
-	out.contentEncoding = "gzip"
+	out.Path = writer.Name()
+	out.ContentEncoding = "gzip"
 	// fmt.Printf("compression saved %%%f (%d, %d)\n", float64(out.Size()) / float64(in.Size()), out.Size(), in.Size())
-	if in.Size() <= out.Size() {
+	if in.Size <= out.Size {
 		return in
 	}
 	return out
@@ -95,7 +95,7 @@ func digestProcessor(in pipelineChan) pipelineChan {
 		if _, err := io.Copy(hash, inBody); err != nil {
 			panic(err)
 		}
-		inFile.digest = hash.Sum(result)
+		inFile.Digest = hash.Sum(result)
 		return inFile
 	})
 }

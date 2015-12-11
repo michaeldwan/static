@@ -100,7 +100,7 @@ func printPushEntryRestult(result staticlib.PushEntryResult, verbose bool) {
 	if result.Entry.Operation == staticlib.Delete {
 		buffer.WriteString(formatByteSize(float64(result.Entry.Dst.Size)))
 	} else {
-		buffer.WriteString(formatByteSize(float64(result.Entry.Src.Size())))
+		buffer.WriteString(formatByteSize(float64(result.Entry.Src.Size)))
 	}
 	if err := result.Error; err != nil {
 		buffer.WriteString("\n    ")
@@ -126,7 +126,7 @@ func sprintOperationType(e staticlib.Entry) string {
 
 func sprintDesc(e staticlib.Entry) string {
 	if e.Src != nil && e.Src.IsRedirect() {
-		return fmt.Sprintf("%s --> %s", e.Src.Key(), e.Src.RedirectUrl())
+		return fmt.Sprintf("%s --> %s", e.Src.Key, e.Src.RedirectUrl)
 	}
 	return e.Key
 }

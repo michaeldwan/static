@@ -22,7 +22,6 @@ func newRedirect(writer *os.File, key, destUrl string) File {
 	defer writer.Close()
 	renderRedirect(destUrl, writer)
 	file := newFile(key, writer.Name())
-	file.contentType = "text/html"
-	file.redirectUrl = destUrl
+	file.RedirectUrl = destUrl
 	return file
 }

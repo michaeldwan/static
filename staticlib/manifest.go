@@ -50,7 +50,7 @@ func (m *Manifest) plan(forceUpdate bool) {
 			e.Operation = Create
 		} else if e.Src == nil && e.Dst != nil {
 			e.Operation = Delete
-		} else if e.Src != nil && e.Dst != nil && !bytes.Equal(e.Src.Digest(), e.Dst.Digest) {
+		} else if e.Src != nil && e.Dst != nil && !bytes.Equal(e.Src.Digest, e.Dst.Digest) {
 			e.Operation = Update
 		} else if forceUpdate {
 			e.Operation = ForceUpdate
@@ -72,7 +72,7 @@ func (m *Manifest) entryForKey(key string) *Entry {
 func (m *Manifest) addFile(file File) {
 	m.Lock()
 	defer m.Unlock()
-	e := m.entryForKey(file.Key())
+	e := m.entryForKey(file.Key)
 	e.Src = &file
 	if file.IsRedirect() {
 		m.Stats.RedirCount++
