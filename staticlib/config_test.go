@@ -169,15 +169,16 @@ ignore:
 func TestConfigGzipList(t *testing.T) {
 	var data = `
 gzip:
-  - "*.html"
-  - "assets/*"
+  - .html
+  - css
+  - text/plain
 `
 	newTestConfig(data, func(c Config, seq sequence) {
 		c.loadGzip(seq)
-		assert.Equal(t, true, c.ShouldGzip("index.html"))
-		assert.Equal(t, true, c.ShouldGzip("assets/image.png"))
-		assert.Equal(t, false, c.ShouldGzip("style.css"))
-		assert.Equal(t, true, c.ShouldGzip("assets/style.css"))
+		assert.Equal(t, true, c.ShouldGzip("text/plain"))
+		assert.Equal(t, true, c.ShouldGzip("text/html"))
+		assert.Equal(t, true, c.ShouldGzip("text/css"))
+		assert.Equal(t, false, c.ShouldGzip("image/png"))
 	})
 }
 
@@ -186,12 +187,18 @@ func TestConfigGzipTrue(t *testing.T) {
 gzip: true
 `
 	newTestConfig(data, func(c Config, seq sequence) {
-		c.loadGzip(seq)
-		assert.Equal(t, true, c.ShouldGzip("index.html"))
-		assert.Equal(t, false, c.ShouldGzip("assets/image.png"))
-		assert.Equal(t, true, c.ShouldGzip("style.css"))
-		assert.Equal(t, true, c.ShouldGzip("assets/style.css"))
-		assert.Equal(t, true, c.ShouldGzip("assets/app.js"))
+		err := c.loadGzip(seq)
+		assert.Equal(t, len(defaultCompressableMimeTypes), len(c.gzipPatterns.globs))
+		assert.Nil(t, err)
+		assert.Equal(t, true, c.ShouldGzip("text/html"))
+		assert.Equal(t, true, c.ShouldGzip("text/css"))
+		assert.Equal(t, true, c.ShouldGzip("text/plain"))
+		assert.Equal(t, true, c.ShouldGzip("application/javascript"))
+		assert.Equal(t, true, c.ShouldGzip("text/xml"))
+		assert.Equal(t, true, c.ShouldGzip("application/xml"))
+		assert.Equal(t, true, c.ShouldGzip("application/atom+xml"))
+		assert.Equal(t, false, c.ShouldGzip("image/png"))
+		assert.Equal(t, false, c.ShouldGzip("application/octet-stream"))
 	})
 }
 

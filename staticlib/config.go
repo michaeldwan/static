@@ -1,7 +1,9 @@
 package staticlib
 
 import (
+	"fmt"
 	"io"
+	"mime"
 	"os"
 	"path/filepath"
 	"strings"
@@ -53,7 +55,9 @@ func (c *Config) load(path string, reader io.Reader) {
 	c.loadS3Bucket(seq)
 	c.loadRedirects(seq)
 	c.loadIgnore(seq)
-	c.loadGzip(seq)
+	if err := c.loadGzip(seq); err != nil {
+		panic(err)
+	}
 	c.loadMaxAge(seq)
 }
 
@@ -123,27 +127,73 @@ func (c *Config) ShouldIgnore(path string) bool {
 	return cast.ToBool(c.ignorePatterns.get(path))
 }
 
-func (c *Config) loadGzip(seq sequence) {
+var defaultCompressableMimeTypes = []string{
+	"text/html",
+	"text/plain",
+	"text/css",
+	"application/javascript",
+	"application/x-javascript",
+	"text/xml",
+	"application/xml",
+	"application/atom+xml",
+}
+
+func (c *Config) loadGzip(seq sequence) error {
 	c.gzipPatterns = newGlobList(false)
 	el, ok := seq.elForKey("gzip")
 	if !ok {
-		return
+		return nil
 	}
 	if cast.ToBool(el.value) {
-		c.gzipPatterns.add(".html", true)
-		c.gzipPatterns.add(".txt", true)
-		c.gzipPatterns.add(".css", true)
-		c.gzipPatterns.add(".js", true)
-		c.gzipPatterns.add(".htm", true)
+		// el.value == `true`, load defaults
+		return c.loadGzipValues(defaultCompressableMimeTypes)
 	} else if list := el.stringSliceForSeqValues(); len(list) > 0 {
-		c.gzipPatterns.loadFromStringSlice(list, true)
+		// el.value == string sequence
+		return c.loadGzipValues(list)
 	} else if len(el.value) > 0 {
-		c.gzipPatterns.add(el.value, true)
+		// el.value == string
+		return c.loadGzipValues([]string{el.value})
 	}
+	return nil
 }
 
-func (c *Config) ShouldGzip(path string) bool {
-	return cast.ToBool(c.gzipPatterns.get(path))
+func (c *Config) loadGzipValues(values []string) error {
+	for _, input := range values {
+		mediaType, err := gzipInputToMediaType(input)
+		if err != nil {
+			return err
+		}
+		c.gzipPatterns.add(mediaType, true)
+	}
+	return nil
+}
+
+// gzipInputToMediaType converts a string value found in the gzip config sequence
+// into a media type string. It accepts either a media type (eg `text/html` as
+// defined in RFC 2183), a media type with a wildcard `text/*`) or a file extension.
+func gzipInputToMediaType(val string) (string, error) {
+	if strings.Contains(val, "/") {
+		mediaType, _, err := mime.ParseMediaType(val)
+		if err != nil {
+			return "", err
+		}
+		return mediaType, nil
+	}
+	if !strings.HasPrefix(val, ".") {
+		val = fmt.Sprintf(".%s", val)
+	}
+	if mediaType := mime.TypeByExtension(val); len(mediaType) > 0 {
+		return gzipInputToMediaType(mediaType)
+	}
+	return "", fmt.Errorf("Invalid gzip value: %v", val)
+}
+
+func (c *Config) ShouldGzip(contentType string) bool {
+	mediaType, _, _ := mime.ParseMediaType(contentType)
+	if mediaType != "" {
+		return cast.ToBool(c.gzipPatterns.get(mediaType))
+	}
+	return false
 }
 
 func (c *Config) loadMaxAge(seq sequence) {

@@ -58,7 +58,7 @@ func setCacheControl(cfg Config, in pipelineChan) pipelineChan {
 
 func gzipProcessor(workingDir workingDir, cfg Config, in pipelineChan) pipelineChan {
 	return pipelineStage(in, func(inFile File) File {
-		if cfg.ShouldGzip(inFile.Key) {
+		if cfg.ShouldGzip(inFile.ContentType) {
 			return gzipFile(workingDir, inFile)
 		}
 		return inFile
