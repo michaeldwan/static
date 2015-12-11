@@ -93,6 +93,7 @@ func extractNodes(reader io.Reader) []*node {
 			line:   strings.TrimSpace(line),
 			lineNo: i + 1,
 		}
+		// TODO: either allow 2 spaces OR tab or fail on tab with a helpful message
 		if strings.HasPrefix(line, "  ") {
 			parent := nodes[len(nodes)-1]
 			parent.subnodes = append(parent.subnodes, node)
