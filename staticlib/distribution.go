@@ -71,7 +71,7 @@ func (d Distribution) invalidate(m *Manifest) error {
 func invalidationPathsFromManifest(m *Manifest) []string {
 	pathSet := make(map[string]bool)
 	// TODO: modes <precise, directory>
-	for _, e := range m.entriesForOperations(Update, ForceUpdate, Create) {
+	for _, e := range m.entriesForPushActions(Update, ForceUpdate, Create) {
 		// path := "/" + e.Key + "*"
 		path := "/" + e.Key
 		pathSet[path] = true

@@ -3,6 +3,7 @@ package staticlib
 import (
 	"encoding/hex"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -10,8 +11,9 @@ import (
 
 // Bucket is an S3 bucket
 type Bucket struct {
-	region string
-	name   string
+	region  string
+	name    string
+	objects map[string]*Object
 }
 
 type Object struct {
@@ -20,10 +22,11 @@ type Object struct {
 	Size   int64
 }
 
-func newBucket(cfg Config) Bucket {
-	b := Bucket{
-		region: cfg.S3Region,
-		name:   cfg.S3Bucket,
+func NewBucket(cfg Config) *Bucket {
+	b := &Bucket{
+		region:  cfg.S3Region,
+		name:    cfg.S3Bucket,
+		objects: make(map[string]*Object),
 	}
 	return b
 }
@@ -33,27 +36,32 @@ func (b Bucket) WebsiteEndpoint() string {
 	return fmt.Sprintf("%s.s3-website-%s.amazonaws.com", b.name, b.region)
 }
 
-func (b Bucket) Scan() <-chan Object {
-	out := make(chan Object)
+func (b *Bucket) String() string {
+	return fmt.Sprintf("Destination: %s (%s)", b.name, b.region)
+}
+
+func (b *Bucket) Scan() *Operation {
+	op := newOperation()
 	go func() {
-		fmt.Printf("scan bucket")
-		defer close(out)
+		defer op.done()
 		listRequest := &s3.ListObjectsInput{
 			Bucket: aws.String(b.name),
 		}
 
-		s3Client.ListObjectsPages(listRequest, func(page *s3.ListObjectsOutput, lastPage bool) bool {
+		op.err = s3Client.ListObjectsPages(listRequest, func(page *s3.ListObjectsOutput, lastPage bool) bool {
 			for _, obj := range page.Contents {
-				out <- Object{
+				object := &Object{
 					Key:    *obj.Key,
 					Digest: etagToDigest(*obj.ETag),
 					Size:   *obj.Size,
 				}
+				b.objects[object.Key] = object
+				op.progressCh <- Progress{Num: len(b.objects)}
 			}
 			return true
 		})
 	}()
-	return out
+	return op
 }
 
 func etagToDigest(etag string) []byte {
@@ -62,25 +70,29 @@ func etagToDigest(etag string) []byte {
 	return etagBytes
 }
 
-func (b Bucket) putFile(file *File, simulate bool) error {
+func (b Bucket) putFile(content *Content, simulate bool) error {
 	if simulate {
 		return nil
 	}
 
-	reader := file.Body()
+	reader, err := os.Open(content.workingFile().path)
+	if err != nil {
+		return err
+	}
 	defer reader.Close()
 
 	input := &s3.PutObjectInput{
 		ACL:             aws.String("public-read"),
 		Bucket:          aws.String(b.name),
 		Body:            reader,
-		ContentLength:   aws.Long(file.Size),
-		ContentType:     aws.String(file.ContentType),
-		Key:             aws.String(file.Key),
-		CacheControl:    aws.String(file.CacheControl),
-		ContentEncoding: aws.String(file.ContentEncoding),
+		ContentLength:   aws.Long(content.Size()),
+		ContentType:     aws.String(content.ContentType),
+		Key:             aws.String(content.Key),
+		CacheControl:    aws.String(content.CacheControl),
+		ContentEncoding: aws.String(content.ContentEncoding),
 	}
-	_, err := s3Client.PutObject(input)
+	_, err = s3Client.PutObject(input)
+	printAWSError(err)
 	return err
 }
 

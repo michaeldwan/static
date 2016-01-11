@@ -3,13 +3,13 @@ package staticlib
 import (
 	"bytes"
 	"crypto/md5"
-	"sync"
+	"sort"
 )
 
-type Operation int
+type PushAction int
 
 const (
-	Skip Operation = iota
+	Skip PushAction = iota
 	Create
 	Update
 	ForceUpdate
@@ -17,83 +17,57 @@ const (
 )
 
 type Entry struct {
-	Key       string
-	Src       *File
-	Dst       *Object
-	Operation Operation
-}
-
-type ManifestStats struct {
-	ObjCount   int64
-	FileCount  int64
-	RedirCount int64
+	Key        string
+	Src        *Content
+	Dst        *Object
+	PushAction PushAction
 }
 
 type Manifest struct {
-	*sync.Mutex
 	entries map[string]*Entry
 	digest  [16]byte
-	Stats   *ManifestStats
 }
 
-func newManifest() *Manifest {
-	return &Manifest{
-		Mutex:   &sync.Mutex{},
-		entries: make(map[string]*Entry),
-		Stats:   &ManifestStats{},
-	}
-}
+func NewManifest(src *Source, bucket *Bucket, forceUpdate bool) *Manifest {
+	m := &Manifest{}
+	keys := sortedKeys(src, bucket)
+	m.entries = make(map[string]*Entry, len(keys))
+	digestBuffer := bytes.Buffer{}
+	for _, key := range keys {
+		src := src.ContentForKey(key)
+		dst := bucket.objects[key]
+		op := Skip
 
-func (m *Manifest) plan(forceUpdate bool) {
-	for _, e := range m.entries {
-		if e.Src != nil && e.Dst == nil {
-			e.Operation = Create
-		} else if e.Src == nil && e.Dst != nil {
-			e.Operation = Delete
-		} else if e.Src != nil && e.Dst != nil && !bytes.Equal(e.Src.Digest, e.Dst.Digest) {
-			e.Operation = Update
+		if src != nil && dst == nil {
+			op = Create
+		} else if src == nil && dst != nil {
+			op = Delete
+		} else if src != nil && dst != nil && !bytes.Equal(src.Digest, dst.Digest) {
+			op = Update
 		} else if forceUpdate {
-			e.Operation = ForceUpdate
-		} else {
-			e.Operation = Skip
+			op = ForceUpdate
 		}
+
+		m.entries[key] = &Entry{
+			Key:        key,
+			Src:        src,
+			Dst:        dst,
+			PushAction: op,
+		}
+
+		digestBuffer.Write([]byte(key))
+		digestBuffer.Write([]byte(string(op)))
 	}
+	m.digest = md5.Sum(digestBuffer.Bytes())
+
+	return m
 }
 
-func (m *Manifest) entryForKey(key string) *Entry {
-	entry, ok := m.entries[key]
-	if !ok {
-		entry = &Entry{Key: key}
-		m.entries[key] = entry
-	}
-	return entry
-}
-
-func (m *Manifest) addFile(file File) {
-	m.Lock()
-	defer m.Unlock()
-	e := m.entryForKey(file.Key)
-	e.Src = &file
-	if file.IsRedirect() {
-		m.Stats.RedirCount++
-	} else {
-		m.Stats.FileCount++
-	}
-}
-
-func (m *Manifest) addObject(obj Object) {
-	m.Lock()
-	defer m.Unlock()
-	e := m.entryForKey(obj.Key)
-	e.Dst = &obj
-	m.Stats.ObjCount++
-}
-
-func (m *Manifest) entriesForOperations(ops ...Operation) []Entry {
+func (m *Manifest) entriesForPushActions(ops ...PushAction) []Entry {
 	var entries []Entry
 	for _, entry := range m.entries {
 		for _, op := range ops {
-			if entry.Operation == op {
+			if entry.PushAction == op {
 				entries = append(entries, *entry)
 				break
 			}
@@ -102,22 +76,19 @@ func (m *Manifest) entriesForOperations(ops ...Operation) []Entry {
 	return entries
 }
 
-func (m *Manifest) createDigest() {
-	b := bytes.Buffer{}
-	for _, entry := range m.entries {
-		b.Write([]byte(entry.Key))
-		b.Write([]byte(string(entry.Operation)))
+func sortedKeys(src *Source, bucket *Bucket) []string {
+	keyMap := make(map[string]bool)
+	for key := range src.contents {
+		keyMap[key] = true
 	}
-	m.digest = md5.Sum(b.Bytes())
-}
+	for key := range bucket.objects {
+		keyMap[key] = true
+	}
 
-func (m *Manifest) entryStream() <-chan *Entry {
-	out := make(chan *Entry)
-	go func() {
-		for _, e := range m.entries {
-			out <- e
-		}
-		close(out)
-	}()
-	return out
+	keys := make([]string, 0, len(keyMap))
+	for key := range keyMap {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }

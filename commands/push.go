@@ -35,22 +35,52 @@ type pushStats struct {
 func push(cmd *cobra.Command, args []string) {
 	cfg := staticlib.NewConfig(configFilePath)
 	staticlib.ConfigureAWS(cfg)
-	deployment := staticlib.NewDeployment(cfg)
-	defer deployment.Clean()
-	printer.Infof("Source: %s\n", cfg.SourceDirectory)
-	printer.Infof("Destination: %s (%s)\n", cfg.S3Bucket, cfg.S3Region)
 
-	for stats := range deployment.Compile(forceUpdate) {
-		printScanMsg(stats, false)
+	source := staticlib.NewSource(cfg)
+	defer source.Clean()
+	fmt.Println(source)
+
+	bucket := staticlib.NewBucket(cfg)
+	fmt.Println(bucket)
+
+	op := source.Capture()
+	printOperationProgress("Scanning directory", op)
+	if op.Err() != nil {
+		os.Exit(70)
 	}
-	printScanMsg(deployment.Manifest.Stats, true)
+
+	op = source.GenerateRedirects()
+	printOperationProgress("Generating redirects", op)
+	if op.Err() != nil {
+		os.Exit(70)
+	}
+
+	op = source.CompressContents()
+	printOperationProgress("Compressing", op)
+	if op.Err() != nil {
+		os.Exit(70)
+	}
+
+	op = source.DigestContents()
+	printOperationProgress("Digesting", op)
+	if op.Err() != nil {
+		os.Exit(70)
+	}
+
+	op = bucket.Scan()
+	printOperationProgress("Scanning target", op)
+	if op.Err() != nil {
+		os.Exit(70)
+	}
+
+	manifest := staticlib.NewManifest(&source, bucket, forceUpdate)
 
 	printer.Debugln("Parallel uploads:", concurrency)
 	if dryRun {
 		printer.Infoln("*** Dry Run, operations are simulated ***")
 	}
 
-	pusher := staticlib.NewPush(&deployment)
+	pusher := staticlib.NewPusher(bucket, manifest)
 	for result := range pusher.Push(concurrency, forceUpdate, dryRun) {
 		printPushEntryRestult(result, verboseOutput)
 	}
@@ -71,20 +101,26 @@ func init() {
 	staticCmd.AddCommand(pushCmd)
 }
 
-func printScanMsg(s *staticlib.ManifestStats, done bool) {
-	printer.Infof("\rScanning: %d files, %d redirects, %d existing objects", s.FileCount, s.RedirCount, s.ObjCount)
-	if done {
-		printer.Infof(", done\n")
-	}
-}
-
 func printStats(stats staticlib.PushStats) {
 	printer.Infof("Done: %d files created, %d updated, %d deleted, and %d skipped ~ %s\n", stats.Created, stats.Updated, stats.Deleted, stats.Skipped, formatByteSize(float64(stats.Bytes)))
 }
 
+func printOperationProgress(msg string, op *staticlib.Operation) {
+	ran := false
+	for p := range op.Progress() {
+		ran = true
+		fmt.Printf("\r%s: %s", msg, p)
+	}
+	if err := op.Err(); err != nil {
+		fmt.Printf(", error!\n  %s.\n", err)
+	} else if ran {
+		fmt.Printf(", done.\n")
+	}
+}
+
 func printPushEntryRestult(result staticlib.PushEntryResult, verbose bool) {
 	level := printer.DefaultLevel
-	if result.Entry.Operation == staticlib.Skip {
+	if result.Entry.PushAction == staticlib.Skip {
 		level = printer.LevelDebug
 	}
 	var buffer bytes.Buffer
@@ -94,14 +130,14 @@ func printPushEntryRestult(result staticlib.PushEntryResult, verbose bool) {
 	} else {
 		buffer.WriteString("\x1b[31m\u2717\x1b[0m ")
 	}
-	buffer.WriteString(sprintOperationType(*result.Entry))
+	buffer.WriteString(sprintPushActionType(*result.Entry))
 	buffer.WriteString(": ")
 	buffer.WriteString(sprintDesc(*result.Entry))
 	buffer.WriteString(" ~ ")
-	if result.Entry.Operation == staticlib.Delete {
+	if result.Entry.PushAction == staticlib.Delete {
 		buffer.WriteString(formatByteSize(float64(result.Entry.Dst.Size)))
 	} else {
-		buffer.WriteString(formatByteSize(float64(result.Entry.Src.Size)))
+		buffer.WriteString(formatByteSize(float64(result.Entry.Src.Size())))
 	}
 	if result.Entry.Src != nil && len(result.Entry.Src.Notes) > 0 {
 		buffer.WriteString(" [")
@@ -116,8 +152,8 @@ func printPushEntryRestult(result staticlib.PushEntryResult, verbose bool) {
 	printer.Println(level, buffer.String())
 }
 
-func sprintOperationType(e staticlib.Entry) string {
-	switch e.Operation {
+func sprintPushActionType(e staticlib.Entry) string {
+	switch e.PushAction {
 	case staticlib.Create:
 		return "Create"
 	case staticlib.Update:

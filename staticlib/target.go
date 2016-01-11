@@ -6,6 +6,6 @@ type Target struct {
 
 func newTarget(cfg Config) *Target {
 	t := Target{}
-	t.Bucket = newBucket(cfg)
+	// t.Bucket = newBucket(cfg)
 	return &t
 }

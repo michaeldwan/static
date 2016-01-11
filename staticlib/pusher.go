@@ -1,13 +1,18 @@
 package staticlib
 
 type Pusher struct {
-	deployment *Deployment
-	stats      *PushStats
-	err        error
+	bucket   *Bucket
+	manifest *Manifest
+	stats    *PushStats
+	err      error
 }
 
-func NewPush(d *Deployment) *Pusher {
-	return &Pusher{deployment: d, stats: &PushStats{}}
+func NewPusher(bucket *Bucket, manifest *Manifest) *Pusher {
+	return &Pusher{
+		bucket:   bucket,
+		manifest: manifest,
+		stats:    &PushStats{},
+	}
 }
 
 func (p *Pusher) Err() error {
@@ -40,7 +45,7 @@ func (p *Pusher) Push(concurrency int, forceUpdate bool, simulate bool) <-chan P
 			pool.Wait()
 			close(results)
 		}()
-		for _, e := range p.deployment.Manifest.entries {
+		for _, e := range p.manifest.entries {
 			e := e
 			if p.err != nil {
 				return
@@ -54,11 +59,11 @@ func (p *Pusher) Push(concurrency int, forceUpdate bool, simulate bool) <-chan P
 }
 
 func (p *Pusher) Invalidate() {
-	if len(p.deployment.Manifest.entriesForOperations(Update, ForceUpdate)) == 0 {
+	if len(p.manifest.entriesForPushActions(Update, ForceUpdate)) == 0 {
 		return
 	}
-	for _, distro := range findDistributionsForOrigin(p.deployment.bucket.WebsiteEndpoint()) {
-		distro.invalidate(p.deployment.Manifest)
+	for _, distro := range findDistributionsForOrigin(p.bucket.WebsiteEndpoint()) {
+		distro.invalidate(p.manifest)
 	}
 }
 
@@ -86,17 +91,17 @@ type PushEntryResult struct {
 
 func (p *Pusher) pushEntry(e *Entry, simulate bool) PushEntryResult {
 	result := &PushEntryResult{Entry: e}
-	switch e.Operation {
+	switch e.PushAction {
 	case Create:
-		if result.Error = p.deployment.bucket.putFile(e.Src, simulate); result.Error == nil {
-			result.Stats = PushStats{Bytes: e.Src.Size, Created: 1}
+		if result.Error = p.bucket.putFile(e.Src, simulate); result.Error == nil {
+			result.Stats = PushStats{Bytes: e.Src.Size(), Created: 1}
 		}
 	case Update, ForceUpdate:
-		if result.Error = p.deployment.bucket.putFile(e.Src, simulate); result.Error == nil {
-			result.Stats = PushStats{Bytes: e.Src.Size, Updated: 1}
+		if result.Error = p.bucket.putFile(e.Src, simulate); result.Error == nil {
+			result.Stats = PushStats{Bytes: e.Src.Size(), Updated: 1}
 		}
 	case Delete:
-		if result.Error = p.deployment.bucket.deleteKey(e.Key, simulate); result.Error == nil {
+		if result.Error = p.bucket.deleteKey(e.Key, simulate); result.Error == nil {
 			result.Stats = PushStats{Deleted: 1}
 		}
 	case Skip:
