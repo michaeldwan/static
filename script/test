@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-
-set -ex
-
-bash ./script/bindata
-export GO15VENDOREXPERIMENT=1
-go test ./staticlib -v
